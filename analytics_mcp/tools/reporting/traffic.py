@@ -498,3 +498,192 @@ async def get_acquisition_report(
     formatted["total_results"] = len(formatted["results"])
 
     return formatted
+
+
+# =============================================================================
+# PAGE METRICS
+# =============================================================================
+
+# Mapping for page report dimensions
+PAGE_TYPE_DIMENSION_MAP = {
+    "all": "pagePath",
+    "landing_pages": "landingPage",
+    "exit_pages": "exitPage",
+}
+
+# Mapping for page sort metrics
+PAGE_SORT_METRIC_MAP = {
+    "views": "screenPageViews",
+    "users": "totalUsers",
+    "engagement_time": "userEngagementDuration",
+    "bounce_rate": "bounceRate",
+}
+
+# Metrics for page reports
+PAGE_METRICS = [
+    "screenPageViews",
+    "totalUsers",
+    "userEngagementDuration",
+    "bounceRate",
+    "sessions",
+]
+
+
+@mcp.tool(
+    description="""Get top pages report: which pages get the most traffic and engagement.
+
+Shows page performance ranked by views, users, or engagement.
+
+## Returns
+- screenPageViews: Total page views
+- totalUsers: Unique visitors to the page
+- userEngagementDuration: Time spent on page (seconds)
+- bounceRate: Percentage of single-page visits
+- sessions: Number of sessions including this page
+
+## Parameters
+
+### page_type (string, default: "all")
+- "all": All pages by URL path
+- "landing_pages": First page users see when entering the site
+- "exit_pages": Last page users see before leaving
+
+### start_date / end_date (string)
+Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
+
+### limit (integer, default: 10)
+Number of results to return (1-100).
+
+### sort_by (string, default: "views")
+- "views": Sort by page views
+- "users": Sort by unique visitors
+- "engagement_time": Sort by time on page
+- "bounce_rate": Sort by bounce rate
+
+### filter_path (string, optional)
+Filter by URL path. Examples: "/blog/", "/products/", "/pricing"
+
+### filter_hostname (string, optional)
+Filter by hostname. Examples: "example.com", "blog.example.com"
+
+## Examples
+- Top 10 pages: get_top_pages()
+- Top landing pages: get_top_pages(page_type="landing_pages")
+- Blog pages only: get_top_pages(filter_path="/blog/")
+- Most engaging pages: get_top_pages(sort_by="engagement_time", limit=20)
+
+## Note
+This shows page-level metrics. For site-wide totals, use get_traffic_overview instead.
+"""
+)
+async def get_top_pages(
+    page_type: Literal["all", "landing_pages", "exit_pages"] = "all",
+    start_date: str = "30daysAgo",
+    end_date: str = "today",
+    limit: int = 10,
+    sort_by: Literal["views", "users", "engagement_time", "bounce_rate"] = "views",
+    filter_path: Optional[str] = None,
+    filter_hostname: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Get top pages report showing most visited pages."""
+
+    # Validate inputs
+    _validate_date_format(start_date)
+    _validate_date_format(end_date)
+
+    if page_type not in PAGE_TYPE_DIMENSION_MAP:
+        raise ValueError(f"Invalid page_type: '{page_type}'. Valid options: {list(PAGE_TYPE_DIMENSION_MAP.keys())}")
+
+    if sort_by not in PAGE_SORT_METRIC_MAP:
+        raise ValueError(f"Invalid sort_by: '{sort_by}'. Valid options: {list(PAGE_SORT_METRIC_MAP.keys())}")
+
+    dimension_name = PAGE_TYPE_DIMENSION_MAP[page_type]
+    sort_metric = PAGE_SORT_METRIC_MAP[sort_by]
+
+    request = data_v1beta.RunReportRequest(
+        property=get_property_id(),
+        date_ranges=[
+            data_v1beta.DateRange(start_date=start_date, end_date=end_date)
+        ],
+        dimensions=[data_v1beta.Dimension(name=dimension_name)],
+        metrics=[data_v1beta.Metric(name=m) for m in PAGE_METRICS],
+        order_bys=[
+            data_v1beta.OrderBy(
+                metric=data_v1beta.OrderBy.MetricOrderBy(metric_name=sort_metric),
+                desc=True,
+            )
+        ],
+        limit=limit,
+    )
+
+    # Add filters if provided
+    filters = []
+    if filter_path:
+        filters.append(
+            data_v1beta.FilterExpression(
+                filter=data_v1beta.Filter(
+                    field_name=dimension_name,
+                    string_filter=data_v1beta.Filter.StringFilter(
+                        match_type=data_v1beta.Filter.StringFilter.MatchType.CONTAINS,
+                        value=filter_path,
+                        case_sensitive=False,
+                    ),
+                )
+            )
+        )
+
+    if filter_hostname:
+        filters.append(
+            data_v1beta.FilterExpression(
+                filter=data_v1beta.Filter(
+                    field_name="hostName",
+                    string_filter=data_v1beta.Filter.StringFilter(
+                        match_type=data_v1beta.Filter.StringFilter.MatchType.CONTAINS,
+                        value=filter_hostname,
+                        case_sensitive=False,
+                    ),
+                )
+            )
+        )
+
+    if filters:
+        if len(filters) == 1:
+            request.dimension_filter = filters[0]
+        else:
+            request.dimension_filter = data_v1beta.FilterExpression(
+                and_group=data_v1beta.FilterExpressionList(expressions=filters)
+            )
+
+    response = await create_data_api_client().run_report(request)
+    result = proto_to_dict(response)
+
+    # Format response for PM-friendly output
+    formatted = {
+        "date_range": {"start": start_date, "end": end_date},
+        "page_type": page_type,
+        "sort_by": sort_by,
+        "filters_applied": {
+            k: v for k, v in {
+                "path": filter_path,
+                "hostname": filter_hostname,
+            }.items() if v is not None
+        },
+        "results": [],
+    }
+
+    for row in result.get("rows", []):
+        dimension_values = row.get("dimension_values", [])
+        metric_values = row.get("metric_values", [])
+
+        entry = {
+            "page": dimension_values[0].get("value") if dimension_values else None,
+        }
+        for i, metric_name in enumerate(PAGE_METRICS):
+            if i < len(metric_values):
+                entry[metric_name] = metric_values[i].get("value")
+
+        formatted["results"].append(entry)
+
+    formatted["total_results"] = len(formatted["results"])
+
+    return formatted
