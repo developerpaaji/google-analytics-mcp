@@ -531,3 +531,125 @@ async def get_funnel(
     }
 
     return formatted
+
+
+# =============================================================================
+# SITE SEARCH
+# =============================================================================
+
+# Metrics for search reports
+SEARCH_METRICS = [
+    "eventCount",
+    "totalUsers",
+]
+
+
+@mcp.tool(
+    description="""Get site search report: what users search for on your site.
+
+Shows search terms users enter in your site's search box.
+
+## Returns
+- searchTerm: The search query entered by users
+- eventCount: Number of times this term was searched
+- totalUsers: Unique users who searched this term
+
+## Parameters
+
+### start_date / end_date (string)
+Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
+
+### limit (integer, default: 20)
+Number of results to return (1-100).
+
+### sort_by (string, default: "count")
+- "count": Sort by search frequency
+- "users": Sort by unique users
+
+### filter_term (string, optional)
+Filter by search term. Partial match, case-insensitive.
+
+## Examples
+- Top search terms: get_site_search()
+- Last 7 days: get_site_search(start_date="7daysAgo")
+- Search for specific term: get_site_search(filter_term="pricing")
+
+## Note
+Requires site search tracking to be configured in GA4.
+If no results, site search may not be set up for this property.
+"""
+)
+async def get_site_search(
+    start_date: str = "30daysAgo",
+    end_date: str = "today",
+    limit: int = 20,
+    sort_by: Literal["count", "users"] = "count",
+    filter_term: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Get site search report showing what users search for."""
+
+    _validate_date_format(start_date)
+    _validate_date_format(end_date)
+
+    sort_metric = "eventCount" if sort_by == "count" else "totalUsers"
+
+    request = data_v1beta.RunReportRequest(
+        property=get_property_id(),
+        date_ranges=[
+            data_v1beta.DateRange(start_date=start_date, end_date=end_date)
+        ],
+        dimensions=[data_v1beta.Dimension(name="searchTerm")],
+        metrics=[data_v1beta.Metric(name=m) for m in SEARCH_METRICS],
+        order_bys=[
+            data_v1beta.OrderBy(
+                metric=data_v1beta.OrderBy.MetricOrderBy(metric_name=sort_metric),
+                desc=True,
+            )
+        ],
+        limit=limit,
+    )
+
+    # Add filter if provided
+    if filter_term:
+        request.dimension_filter = data_v1beta.FilterExpression(
+            filter=data_v1beta.Filter(
+                field_name="searchTerm",
+                string_filter=data_v1beta.Filter.StringFilter(
+                    match_type=data_v1beta.Filter.StringFilter.MatchType.CONTAINS,
+                    value=filter_term,
+                    case_sensitive=False,
+                ),
+            )
+        )
+
+    response = await create_data_api_client().run_report(request)
+    result = proto_to_dict(response)
+
+    formatted = {
+        "date_range": {"start": start_date, "end": end_date},
+        "sort_by": sort_by,
+        "filter_applied": filter_term,
+        "results": [],
+    }
+
+    for row in result.get("rows", []):
+        dimension_values = row.get("dimension_values", [])
+        metric_values = row.get("metric_values", [])
+
+        search_term = dimension_values[0].get("value") if dimension_values else None
+
+        # Skip empty or (not set) terms
+        if not search_term or search_term == "(not set)":
+            continue
+
+        entry = {
+            "searchTerm": search_term,
+            "eventCount": int(metric_values[0].get("value", 0)) if metric_values else 0,
+            "totalUsers": int(metric_values[1].get("value", 0)) if len(metric_values) > 1 else 0,
+        }
+
+        formatted["results"].append(entry)
+
+    formatted["total_results"] = len(formatted["results"])
+
+    return formatted
