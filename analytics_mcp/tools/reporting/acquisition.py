@@ -14,7 +14,7 @@
 
 """PM-friendly tools for traffic and acquisition reporting."""
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from analytics_mcp.coordinator import mcp
 from analytics_mcp.tools.utils import (
@@ -47,42 +47,6 @@ GROUP_BY_OPTIONS = ["source_medium", "channel", "campaign", "source", "medium", 
 # - "bounce_rate": Percentage of non-engaged sessions
 SORT_BY_OPTIONS = ["sessions", "users", "key_events", "engagement_rate", "bounce_rate"]
 
-# =============================================================================
-# DATE FORMAT
-# Valid formats for start_date and end_date:
-# - Relative: "today", "yesterday", "NdaysAgo" (e.g., "7daysAgo", "30daysAgo", "90daysAgo")
-# - Absolute: "YYYY-MM-DD" (e.g., "2025-01-15")
-#
-# WRONG formats (will fail):
-# - "last7days", "last_7_days", "7days" (use "7daysAgo" instead)
-# - "2025/01/15", "01-15-2025" (use "2025-01-15" instead)
-# - "Today", "Yesterday" (lowercase only: "today", "yesterday")
-# =============================================================================
-
-# =============================================================================
-# FILTER VALUES
-# Common values for filter parameters (case-insensitive, partial match):
-#
-# filter_source examples:
-#   "google", "facebook", "bing", "twitter", "linkedin", "instagram", "youtube"
-#   "(direct)" for direct traffic
-#
-# filter_medium examples:
-#   "organic" - Organic search traffic
-#   "cpc" - Paid search/cost-per-click (NOT "paid", "ppc", or "ads")
-#   "email" - Email campaigns (NOT "mail" or "newsletter")
-#   "referral" - Referral traffic from other sites
-#   "social" - Social media traffic
-#   "display" - Display advertising
-#   "(none)" - Direct traffic with no medium
-#
-# filter_page_path examples:
-#   "/blog/", "/products/", "/pricing", "/checkout"
-#
-# filter_hostname examples:
-#   "example.com", "blog.example.com", "shop.example.com"
-# =============================================================================
-
 # Mapping from friendly group_by names to GA4 dimension API names
 GROUP_BY_DIMENSION_MAP = {
     "source_medium": "sessionSourceMedium",
@@ -103,13 +67,12 @@ SORT_BY_METRIC_MAP = {
 }
 
 # Default metrics for traffic overview
-# These are the standard GA4 metric API names
 TRAFFIC_OVERVIEW_METRICS = [
     "sessions",
     "totalUsers",
     "newUsers",
     "bounceRate",
-    "userEngagementDuration",  # Total engagement time in seconds
+    "userEngagementDuration",
     "screenPageViews",
 ]
 
@@ -120,7 +83,7 @@ ACQUISITION_METRICS = [
     "newUsers",
     "bounceRate",
     "engagementRate",
-    "keyEvents",  # Formerly "conversions" - renamed by Google in 2024
+    "keyEvents",
 ]
 
 
@@ -132,14 +95,12 @@ def _validate_date_format(date_str: str) -> None:
     """
     import re
 
-    # Valid relative dates
     relative_patterns = [
         r"^today$",
         r"^yesterday$",
-        r"^\d+daysAgo$",  # e.g., "7daysAgo", "30daysAgo"
+        r"^\d+daysAgo$",
     ]
 
-    # Valid absolute date: YYYY-MM-DD
     absolute_pattern = r"^\d{4}-\d{2}-\d{2}$"
 
     is_valid = any(re.match(p, date_str) for p in relative_patterns) or re.match(absolute_pattern, date_str)
@@ -153,11 +114,7 @@ def _validate_date_format(date_str: str) -> None:
 
 
 def _validate_group_by(group_by: str) -> None:
-    """Validates group_by parameter.
-
-    Raises:
-        ValueError: If group_by value is invalid.
-    """
+    """Validates group_by parameter."""
     if group_by not in GROUP_BY_OPTIONS:
         raise ValueError(
             f"Invalid group_by: '{group_by}'. "
@@ -167,11 +124,7 @@ def _validate_group_by(group_by: str) -> None:
 
 
 def _validate_sort_by(sort_by: str) -> None:
-    """Validates sort_by parameter.
-
-    Raises:
-        ValueError: If sort_by value is invalid.
-    """
+    """Validates sort_by parameter."""
     if sort_by not in SORT_BY_OPTIONS:
         raise ValueError(
             f"Invalid sort_by: '{sort_by}'. "
@@ -266,7 +219,6 @@ def _build_dimension_filter(
     if len(filters) == 1:
         return filters[0]
 
-    # Combine multiple filters with AND
     return data_v1beta.FilterExpression(
         and_group=data_v1beta.FilterExpressionList(expressions=filters)
     )
@@ -310,7 +262,6 @@ async def get_traffic_overview(
 ) -> Dict[str, Any]:
     """Get a high-level traffic overview with key metrics."""
 
-    # Validate inputs
     _validate_date_format(start_date)
     _validate_date_format(end_date)
 
@@ -319,7 +270,6 @@ async def get_traffic_overview(
     ]
 
     if compare_previous_period:
-        # Add previous period for comparison
         date_ranges.append(
             data_v1beta.DateRange(
                 start_date=start_date,
@@ -327,8 +277,6 @@ async def get_traffic_overview(
                 name="previous",
             )
         )
-        # Note: GA4 automatically calculates the previous period when you add a second date range
-        # with the same duration. For explicit control, we'd need to calculate dates manually.
 
     request = data_v1beta.RunReportRequest(
         property=get_property_id(),
@@ -339,7 +287,6 @@ async def get_traffic_overview(
     response = await create_data_api_client().run_report(request)
     result = proto_to_dict(response)
 
-    # Format response for PM-friendly output
     formatted = {
         "date_range": {"start": start_date, "end": end_date},
         "metrics": {},
@@ -426,7 +373,6 @@ async def get_acquisition_report(
 ) -> Dict[str, Any]:
     """Get traffic acquisition report grouped by source, medium, channel, or campaign."""
 
-    # Validate inputs
     _validate_date_format(start_date)
     _validate_date_format(end_date)
     _validate_group_by(group_by)
@@ -451,7 +397,6 @@ async def get_acquisition_report(
         limit=limit,
     )
 
-    # Add filters if provided
     dimension_filter = _build_dimension_filter(
         filter_source=filter_source,
         filter_medium=filter_medium,
@@ -465,7 +410,6 @@ async def get_acquisition_report(
     response = await create_data_api_client().run_report(request)
     result = proto_to_dict(response)
 
-    # Format response for PM-friendly output
     formatted = {
         "date_range": {"start": start_date, "end": end_date},
         "group_by": group_by,
@@ -501,104 +445,92 @@ async def get_acquisition_report(
 
 
 # =============================================================================
-# PAGE METRICS
+# TRENDS
 # =============================================================================
 
-# Mapping for page report dimensions
-PAGE_TYPE_DIMENSION_MAP = {
-    "all": "pagePath",
-    "landing_pages": "landingPage",
-    "exit_pages": "exitPage",
-}
-
-# Mapping for page sort metrics
-PAGE_SORT_METRIC_MAP = {
-    "views": "screenPageViews",
-    "users": "totalUsers",
-    "engagement_time": "userEngagementDuration",
-    "bounce_rate": "bounceRate",
-}
-
-# Metrics for page reports
-PAGE_METRICS = [
-    "screenPageViews",
-    "totalUsers",
-    "userEngagementDuration",
-    "bounceRate",
+# Metrics available for trends
+TRENDS_METRICS = [
     "sessions",
+    "totalUsers",
+    "newUsers",
+    "screenPageViews",
+    "bounceRate",
+    "userEngagementDuration",
 ]
+
+# Mapping for granularity to GA4 dimensions
+GRANULARITY_DIMENSION_MAP = {
+    "day": "date",
+    "week": "week",
+    "month": "month",
+}
 
 
 @mcp.tool(
-    description="""Get top pages report: which pages get the most traffic and engagement.
+    description="""Get traffic trends over time: daily, weekly, or monthly metrics.
 
-Shows page performance ranked by views, users, or engagement.
+Shows how traffic metrics change over a date range.
 
 ## Returns
+- date/week/month: The time period
+- sessions: Total visits
+- totalUsers: Unique visitors
+- newUsers: First-time visitors
 - screenPageViews: Total page views
-- totalUsers: Unique visitors to the page
-- userEngagementDuration: Time spent on page (seconds)
 - bounceRate: Percentage of single-page visits
-- sessions: Number of sessions including this page
+- userEngagementDuration: Engagement time (seconds)
 
 ## Parameters
 
-### page_type (string, default: "all")
-- "all": All pages by URL path
-- "landing_pages": First page users see when entering the site
-- "exit_pages": Last page users see before leaving
+### granularity (string, default: "day")
+- "day": Daily breakdown (best for 7-30 days)
+- "week": Weekly breakdown (best for 1-3 months)
+- "month": Monthly breakdown (best for 3+ months)
 
 ### start_date / end_date (string)
 Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
 
-### limit (integer, default: 10)
-Number of results to return (1-100).
-
-### sort_by (string, default: "views")
-- "views": Sort by page views
-- "users": Sort by unique visitors
-- "engagement_time": Sort by time on page
-- "bounce_rate": Sort by bounce rate
-
-### filter_path (string, optional)
-Filter by URL path. Examples: "/blog/", "/products/", "/pricing"
-
-### filter_hostname (string, optional)
-Filter by hostname. Examples: "example.com", "blog.example.com"
+### metric (string, optional)
+Focus on a specific metric. If not provided, returns all metrics.
+Options: "sessions", "users", "page_views", "bounce_rate", "engagement_time"
 
 ## Examples
-- Top 10 pages: get_top_pages()
-- Top landing pages: get_top_pages(page_type="landing_pages")
-- Blog pages only: get_top_pages(filter_path="/blog/")
-- Most engaging pages: get_top_pages(sort_by="engagement_time", limit=20)
+- Daily traffic last 7 days: get_trends(start_date="7daysAgo")
+- Weekly traffic last 30 days: get_trends(granularity="week", start_date="30daysAgo")
+- Monthly users this year: get_trends(granularity="month", start_date="2025-01-01", metric="users")
+- Daily page views: get_trends(metric="page_views")
 
 ## Note
-This shows page-level metrics. For site-wide totals, use get_traffic_overview instead.
+Results are sorted by date ascending (oldest first) for easy charting.
 """
 )
-async def get_top_pages(
-    page_type: Literal["all", "landing_pages", "exit_pages"] = "all",
+async def get_trends(
+    granularity: Literal["day", "week", "month"] = "day",
     start_date: str = "30daysAgo",
     end_date: str = "today",
-    limit: int = 10,
-    sort_by: Literal["views", "users", "engagement_time", "bounce_rate"] = "views",
-    filter_path: Optional[str] = None,
-    filter_hostname: Optional[str] = None,
+    metric: Optional[Literal["sessions", "users", "page_views", "bounce_rate", "engagement_time"]] = None,
 ) -> Dict[str, Any]:
-    """Get top pages report showing most visited pages."""
+    """Get traffic trends over time broken down by day, week, or month."""
 
-    # Validate inputs
     _validate_date_format(start_date)
     _validate_date_format(end_date)
 
-    if page_type not in PAGE_TYPE_DIMENSION_MAP:
-        raise ValueError(f"Invalid page_type: '{page_type}'. Valid options: {list(PAGE_TYPE_DIMENSION_MAP.keys())}")
+    dimension_name = GRANULARITY_DIMENSION_MAP.get(granularity, "date")
 
-    if sort_by not in PAGE_SORT_METRIC_MAP:
-        raise ValueError(f"Invalid sort_by: '{sort_by}'. Valid options: {list(PAGE_SORT_METRIC_MAP.keys())}")
+    # Map friendly metric names to GA4 metric names
+    metric_name_map = {
+        "sessions": "sessions",
+        "users": "totalUsers",
+        "page_views": "screenPageViews",
+        "bounce_rate": "bounceRate",
+        "engagement_time": "userEngagementDuration",
+    }
 
-    dimension_name = PAGE_TYPE_DIMENSION_MAP[page_type]
-    sort_metric = PAGE_SORT_METRIC_MAP[sort_by]
+    # Determine which metrics to fetch
+    if metric:
+        metrics_to_fetch = [metric_name_map.get(metric, "sessions")]
+    else:
+        metrics_to_fetch = TRENDS_METRICS
 
     request = data_v1beta.RunReportRequest(
         property=get_property_id(),
@@ -606,69 +538,25 @@ async def get_top_pages(
             data_v1beta.DateRange(start_date=start_date, end_date=end_date)
         ],
         dimensions=[data_v1beta.Dimension(name=dimension_name)],
-        metrics=[data_v1beta.Metric(name=m) for m in PAGE_METRICS],
+        metrics=[data_v1beta.Metric(name=m) for m in metrics_to_fetch],
         order_bys=[
             data_v1beta.OrderBy(
-                metric=data_v1beta.OrderBy.MetricOrderBy(metric_name=sort_metric),
-                desc=True,
+                dimension=data_v1beta.OrderBy.DimensionOrderBy(
+                    dimension_name=dimension_name
+                ),
+                desc=False,  # Ascending for chronological order
             )
         ],
-        limit=limit,
     )
-
-    # Add filters if provided
-    filters = []
-    if filter_path:
-        filters.append(
-            data_v1beta.FilterExpression(
-                filter=data_v1beta.Filter(
-                    field_name=dimension_name,
-                    string_filter=data_v1beta.Filter.StringFilter(
-                        match_type=data_v1beta.Filter.StringFilter.MatchType.CONTAINS,
-                        value=filter_path,
-                        case_sensitive=False,
-                    ),
-                )
-            )
-        )
-
-    if filter_hostname:
-        filters.append(
-            data_v1beta.FilterExpression(
-                filter=data_v1beta.Filter(
-                    field_name="hostName",
-                    string_filter=data_v1beta.Filter.StringFilter(
-                        match_type=data_v1beta.Filter.StringFilter.MatchType.CONTAINS,
-                        value=filter_hostname,
-                        case_sensitive=False,
-                    ),
-                )
-            )
-        )
-
-    if filters:
-        if len(filters) == 1:
-            request.dimension_filter = filters[0]
-        else:
-            request.dimension_filter = data_v1beta.FilterExpression(
-                and_group=data_v1beta.FilterExpressionList(expressions=filters)
-            )
 
     response = await create_data_api_client().run_report(request)
     result = proto_to_dict(response)
 
-    # Format response for PM-friendly output
     formatted = {
         "date_range": {"start": start_date, "end": end_date},
-        "page_type": page_type,
-        "sort_by": sort_by,
-        "filters_applied": {
-            k: v for k, v in {
-                "path": filter_path,
-                "hostname": filter_hostname,
-            }.items() if v is not None
-        },
-        "results": [],
+        "granularity": granularity,
+        "metric_filter": metric,
+        "data_points": [],
     }
 
     for row in result.get("rows", []):
@@ -676,14 +564,14 @@ async def get_top_pages(
         metric_values = row.get("metric_values", [])
 
         entry = {
-            "page": dimension_values[0].get("value") if dimension_values else None,
+            granularity: dimension_values[0].get("value") if dimension_values else None,
         }
-        for i, metric_name in enumerate(PAGE_METRICS):
+        for i, metric_name in enumerate(metrics_to_fetch):
             if i < len(metric_values):
                 entry[metric_name] = metric_values[i].get("value")
 
-        formatted["results"].append(entry)
+        formatted["data_points"].append(entry)
 
-    formatted["total_results"] = len(formatted["results"])
+    formatted["total_data_points"] = len(formatted["data_points"])
 
     return formatted

@@ -25,7 +25,10 @@ from analytics_mcp.coordinator import mcp
 from analytics_mcp.tools.admin import info  # noqa: F401
 from analytics_mcp.tools.reporting import realtime  # noqa: F401
 from analytics_mcp.tools.reporting import core  # noqa: F401
-from analytics_mcp.tools.reporting import traffic  # noqa: F401
+from analytics_mcp.tools.reporting import acquisition  # noqa: F401
+from analytics_mcp.tools.reporting import engagement  # noqa: F401
+from analytics_mcp.tools.reporting import user  # noqa: F401
+from analytics_mcp.tools.reporting import ecommerce  # noqa: F401
 
 
 def run_server() -> None:
