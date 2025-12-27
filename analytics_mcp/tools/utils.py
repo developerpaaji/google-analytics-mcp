@@ -14,6 +14,7 @@
 
 """Common utilities used by the MCP server."""
 
+import os
 from typing import Any, Dict
 
 from google.analytics import admin_v1beta, data_v1beta, admin_v1alpha
@@ -21,6 +22,25 @@ from google.api_core.gapic_v1.client_info import ClientInfo
 from importlib import metadata
 import google.auth
 import proto
+
+
+def get_property_id() -> str:
+    """Returns the configured GA4 property ID from environment variable.
+
+    Returns:
+        The property resource name in format 'properties/XXXXXX'.
+
+    Raises:
+        ValueError: If GA_PROPERTY_ID environment variable is not set.
+    """
+    property_id = os.environ.get("GA_PROPERTY_ID")
+    if not property_id:
+        raise ValueError(
+            "GA_PROPERTY_ID environment variable is not set. "
+            "Please set it to your GA4 property ID (e.g., '123456789' or "
+            "'properties/123456789')."
+        )
+    return construct_property_rn(property_id)
 
 
 def _get_package_version_with_fallback():

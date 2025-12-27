@@ -18,8 +18,8 @@ from typing import Any, Dict, List
 
 from analytics_mcp.coordinator import mcp
 from analytics_mcp.tools.utils import (
-    construct_property_rn,
     create_data_api_client,
+    get_property_id,
     proto_to_dict,
 )
 from analytics_mcp.tools.reporting.metadata import (
@@ -78,7 +78,6 @@ def _run_realtime_report_description() -> str:
 
 
 async def run_realtime_report(
-    property_id: int | str,
     dimensions: List[str],
     metrics: List[str],
     dimension_filter: Dict[str, Any] = None,
@@ -94,10 +93,9 @@ async def run_realtime_report(
     https://developers.google.com/analytics/devguides/reporting/data/v1/realtime-basics
     for more information.
 
+    The property ID is configured via the GA_PROPERTY_ID environment variable.
+
     Args:
-        property_id: The Google Analytics property ID. Accepted formats are:
-          - A number
-          - A string consisting of 'properties/' followed by a number
         dimensions: A list of dimensions to include in the report. Dimensions must be realtime dimensions.
         metrics: A list of metrics to include in the report. Metrics must be realtime metrics.
         dimension_filter: A Data API FilterExpression
@@ -132,7 +130,7 @@ async def run_realtime_report(
         return_property_quota: Whether to return realtime property quota in the response.
     """
     request = data_v1beta.RunRealtimeReportRequest(
-        property=construct_property_rn(property_id),
+        property=get_property_id(),
         dimensions=[
             data_v1beta.Dimension(name=dimension) for dimension in dimensions
         ],

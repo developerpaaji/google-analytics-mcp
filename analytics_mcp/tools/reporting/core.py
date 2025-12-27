@@ -24,8 +24,8 @@ from analytics_mcp.tools.reporting.metadata import (
     get_order_bys_hints,
 )
 from analytics_mcp.tools.utils import (
-    construct_property_rn,
     create_data_api_client,
+    get_property_id,
     proto_to_dict,
 )
 from google.analytics import data_v1beta
@@ -80,7 +80,6 @@ def _run_report_description() -> str:
 
 
 async def run_report(
-    property_id: int | str,
     date_ranges: List[Dict[str, str]],
     dimensions: List[str],
     metrics: List[str],
@@ -101,10 +100,9 @@ async def run_report(
     format. The protocol buffers for the Data API are available at
     https://github.com/googleapis/googleapis/tree/master/google/analytics/data/v1beta.
 
+    The property ID is configured via the GA_PROPERTY_ID environment variable.
+
     Args:
-        property_id: The Google Analytics property ID. Accepted formats are:
-          - A number
-          - A string consisting of 'properties/' followed by a number
         date_ranges: A list of date ranges
           (https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/DateRange)
           to include in the report.
@@ -139,7 +137,7 @@ async def run_report(
         return_property_quota: Whether to return property quota in the response.
     """
     request = data_v1beta.RunReportRequest(
-        property=construct_property_rn(property_id),
+        property=get_property_id(),
         dimensions=[
             data_v1beta.Dimension(name=dimension) for dimension in dimensions
         ],

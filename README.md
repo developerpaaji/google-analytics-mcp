@@ -25,19 +25,18 @@ and
 to provide several
 [Tools](https://modelcontextprotocol.io/docs/concepts/tools) for use with LLMs.
 
-### Retrieve account and property information 🟠
+### Retrieve property information 🟠
 
-- `get_account_summaries`: Retrieves information about the user's Google
-  Analytics accounts and properties.
-- `get_property_details`: Returns details about a property.
+- `get_property_details`: Returns details about the configured property.
 - `list_google_ads_links`: Returns a list of links to Google Ads accounts for
-  a property.
+  the configured property.
+- `list_property_annotations`: Returns annotations for the configured property.
 
 ### Run core reports 📙
 
 - `run_report`: Runs a Google Analytics report using the Data API.
 - `get_custom_dimensions_and_metrics`: Retrieves the custom dimensions and
-  metrics for a specific property.
+  metrics for the configured property.
 
 ### Run realtime reports ⏳
 
@@ -127,6 +126,10 @@ Credentials saved to file: [PATH_TO_CREDENTIALS_JSON]
     Replace `PATH_TO_CREDENTIALS_JSON` with the path you copied in the previous
     step.
 
+    You must also add a `GA_PROPERTY_ID` attribute to the `env` object with
+    your GA4 property ID. This configures which property the MCP server will
+    use for all operations.
+
     We also recommend that you add a `GOOGLE_CLOUD_PROJECT` attribute to the
     `env` object. Replace `YOUR_PROJECT_ID` in the following example with the
     [project ID](https://support.google.com/googleapi/answer/7014113) of your
@@ -143,12 +146,16 @@ Credentials saved to file: [PATH_TO_CREDENTIALS_JSON]
           ],
           "env": {
             "GOOGLE_APPLICATION_CREDENTIALS": "PATH_TO_CREDENTIALS_JSON",
-            "GOOGLE_PROJECT_ID": "YOUR_PROJECT_ID"
+            "GOOGLE_PROJECT_ID": "YOUR_PROJECT_ID",
+            "GA_PROPERTY_ID": "YOUR_GA4_PROPERTY_ID"
           }
         }
       }
     }
     ```
+
+    > **Note:** You can find your GA4 property ID in Google Analytics under
+    > Admin > Property Settings. It's a numeric ID like `123456789`.
 
 ## Try it out 🥼
 
@@ -163,10 +170,10 @@ Here are some sample prompts to get you started:
   what can the analytics-mcp server do?
   ```
 
-- Ask about a Google Analytics property
+- Ask about your Google Analytics property
 
   ```
-  Give me details about my Google Analytics property with 'xyz' in the name
+  Give me details about my Google Analytics property
   ```
 
 - Prompt for analysis:
