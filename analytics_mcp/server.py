@@ -29,6 +29,7 @@ from analytics_mcp.tools.reporting import acquisition  # noqa: F401
 from analytics_mcp.tools.reporting import engagement  # noqa: F401
 from analytics_mcp.tools.reporting import user  # noqa: F401
 from analytics_mcp.tools.reporting import ecommerce  # noqa: F401
+from analytics_mcp.tools.reporting import ads  # noqa: F401
 
 
 def run_server() -> None:
