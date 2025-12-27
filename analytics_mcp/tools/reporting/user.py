@@ -163,3 +163,179 @@ async def get_user_demographics(
     formatted["total_results"] = len(formatted["results"])
 
     return formatted
+
+
+# =============================================================================
+# RETENTION
+# =============================================================================
+
+# Metrics for retention reports
+RETENTION_METRICS = [
+    "totalUsers",
+    "newUsers",
+    "activeUsers",
+    "userEngagementDuration",
+]
+
+
+@mcp.tool(
+    description="""Get user retention: how well you keep users coming back over time.
+
+Shows new vs returning users and engagement patterns.
+
+## Returns
+- totalUsers: Total unique visitors
+- newUsers: First-time visitors
+- activeUsers: Users who had an engaged session
+- userEngagementDuration: Total engagement time (seconds)
+- returning_users: Calculated (totalUsers - newUsers)
+- returning_rate: Percentage of returning users
+
+## Parameters
+
+### retention_type (string, default: "new_vs_returning")
+- "new_vs_returning": Compare new and returning users
+- "by_first_visit": Group users by when they first visited (cohort)
+
+### start_date / end_date (string)
+Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
+
+### granularity (string, default: "day")
+For "by_first_visit" type only:
+- "day": Daily cohorts
+- "week": Weekly cohorts
+- "month": Monthly cohorts
+
+## Examples
+- New vs returning users: get_retention()
+- Last 7 days: get_retention(start_date="7daysAgo")
+- Cohort analysis: get_retention(retention_type="by_first_visit", granularity="week")
+
+## Note
+For detailed cohort analysis with retention curves, use GA4 Exploration reports in the UI.
+"""
+)
+async def get_retention(
+    retention_type: Literal["new_vs_returning", "by_first_visit"] = "new_vs_returning",
+    start_date: str = "30daysAgo",
+    end_date: str = "today",
+    granularity: Literal["day", "week", "month"] = "day",
+) -> Dict[str, Any]:
+    """Get user retention report showing new vs returning users."""
+
+    _validate_date_format(start_date)
+    _validate_date_format(end_date)
+
+    if retention_type == "by_first_visit":
+        # Cohort-style: group by first session date
+        granularity_dimension_map = {
+            "day": "firstSessionDate",
+            "week": "firstSessionDate",
+            "month": "firstSessionDate",
+        }
+        dimension_name = granularity_dimension_map.get(granularity, "firstSessionDate")
+
+        request = data_v1beta.RunReportRequest(
+            property=get_property_id(),
+            date_ranges=[
+                data_v1beta.DateRange(start_date=start_date, end_date=end_date)
+            ],
+            dimensions=[data_v1beta.Dimension(name=dimension_name)],
+            metrics=[data_v1beta.Metric(name=m) for m in RETENTION_METRICS],
+            order_bys=[
+                data_v1beta.OrderBy(
+                    dimension=data_v1beta.OrderBy.DimensionOrderBy(
+                        dimension_name=dimension_name
+                    ),
+                    desc=False,
+                )
+            ],
+        )
+
+        response = await create_data_api_client().run_report(request)
+        result = proto_to_dict(response)
+
+        formatted = {
+            "date_range": {"start": start_date, "end": end_date},
+            "retention_type": retention_type,
+            "granularity": granularity,
+            "cohorts": [],
+        }
+
+        for row in result.get("rows", []):
+            dimension_values = row.get("dimension_values", [])
+            metric_values = row.get("metric_values", [])
+
+            cohort_date = dimension_values[0].get("value") if dimension_values else None
+            total_users = int(metric_values[0].get("value", 0)) if metric_values else 0
+            new_users = int(metric_values[1].get("value", 0)) if len(metric_values) > 1 else 0
+
+            entry = {
+                "first_visit_date": cohort_date,
+                "totalUsers": total_users,
+                "newUsers": new_users,
+                "activeUsers": int(metric_values[2].get("value", 0)) if len(metric_values) > 2 else 0,
+                "userEngagementDuration": metric_values[3].get("value") if len(metric_values) > 3 else "0",
+            }
+
+            formatted["cohorts"].append(entry)
+
+        formatted["total_cohorts"] = len(formatted["cohorts"])
+
+    else:
+        # Simple new vs returning breakdown
+        request = data_v1beta.RunReportRequest(
+            property=get_property_id(),
+            date_ranges=[
+                data_v1beta.DateRange(start_date=start_date, end_date=end_date)
+            ],
+            dimensions=[data_v1beta.Dimension(name="newVsReturning")],
+            metrics=[data_v1beta.Metric(name=m) for m in RETENTION_METRICS],
+        )
+
+        response = await create_data_api_client().run_report(request)
+        result = proto_to_dict(response)
+
+        formatted = {
+            "date_range": {"start": start_date, "end": end_date},
+            "retention_type": retention_type,
+            "breakdown": [],
+            "summary": {},
+        }
+
+        total_all_users = 0
+        new_users_count = 0
+        returning_users_count = 0
+
+        for row in result.get("rows", []):
+            dimension_values = row.get("dimension_values", [])
+            metric_values = row.get("metric_values", [])
+
+            user_type = dimension_values[0].get("value") if dimension_values else None
+            users = int(metric_values[0].get("value", 0)) if metric_values else 0
+
+            entry = {
+                "user_type": user_type,
+                "totalUsers": users,
+                "activeUsers": int(metric_values[2].get("value", 0)) if len(metric_values) > 2 else 0,
+                "userEngagementDuration": metric_values[3].get("value") if len(metric_values) > 3 else "0",
+            }
+
+            if user_type == "new":
+                new_users_count = users
+            elif user_type == "returning":
+                returning_users_count = users
+
+            total_all_users += users
+            formatted["breakdown"].append(entry)
+
+        # Calculate summary
+        formatted["summary"] = {
+            "total_users": total_all_users,
+            "new_users": new_users_count,
+            "returning_users": returning_users_count,
+            "new_user_rate": round((new_users_count / total_all_users) * 100, 1) if total_all_users > 0 else 0,
+            "returning_rate": round((returning_users_count / total_all_users) * 100, 1) if total_all_users > 0 else 0,
+        }
+
+    return formatted
