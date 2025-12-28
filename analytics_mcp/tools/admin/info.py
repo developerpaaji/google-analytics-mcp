@@ -14,70 +14,25 @@
 
 """Tools for gathering Google Analytics account and property information."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from analytics_mcp.coordinator import mcp
 from analytics_mcp.tools.utils import (
     create_admin_api_client,
-    create_admin_alpha_api_client,
     get_property_id,
     proto_to_dict,
 )
-from google.analytics import admin_v1beta, admin_v1alpha
+from google.analytics import admin_v1beta
 
 
-@mcp.tool(title="List links to Google Ads accounts")
-async def list_google_ads_links() -> List[Dict[str, Any]]:
-    """Returns a list of links to Google Ads accounts for the configured property.
-
-    The property ID is configured via the GA_PROPERTY_ID environment variable.
-    """
-    request = admin_v1beta.ListGoogleAdsLinksRequest(
-        parent=get_property_id()
-    )
-    # Uses an async list comprehension so the pager returned by
-    # list_google_ads_links retrieves all pages.
-    links_pager = await create_admin_api_client().list_google_ads_links(
-        request=request
-    )
-    all_pages = [proto_to_dict(link_page) async for link_page in links_pager]
-    return all_pages
-
-
-@mcp.tool(title="Gets details about the configured property")
+@mcp.tool(
+    description="Get details about the configured GA4 property (name, timezone, currency, industry, etc)."
+)
 async def get_property_details() -> Dict[str, Any]:
-    """Returns details about the configured property.
-
-    The property ID is configured via the GA_PROPERTY_ID environment variable.
-    """
+    """Returns details about the configured property."""
     client = create_admin_api_client()
     request = admin_v1beta.GetPropertyRequest(
         name=get_property_id()
     )
     response = await client.get_property(request=request)
     return proto_to_dict(response)
-
-
-@mcp.tool(title="Gets property annotations for the configured property")
-async def list_property_annotations() -> List[Dict[str, Any]]:
-    """Returns annotations for the configured property.
-
-    Annotations are a feature that allows you to leave notes on GA4 for specific dates or periods.
-    They are typically used to record service releases, marketing campaign launches or changes,
-    and rapid traffic increases or decreases due to external factors.
-
-    The property ID is configured via the GA_PROPERTY_ID environment variable.
-    """
-    request = admin_v1alpha.ListReportingDataAnnotationsRequest(
-        parent=get_property_id()
-    )
-    annotations_pager = (
-        await create_admin_alpha_api_client().list_reporting_data_annotations(
-            request=request
-        )
-    )
-    all_pages = [
-        proto_to_dict(annotation_page)
-        async for annotation_page in annotations_pager
-    ]
-    return all_pages

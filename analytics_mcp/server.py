@@ -23,6 +23,7 @@ from analytics_mcp.coordinator import mcp
 # The `# noqa: F401` comment tells the linter to ignore the "unused import"
 # warning.
 from analytics_mcp.tools.admin import info  # noqa: F401
+from analytics_mcp.tools.reporting import metadata  # noqa: F401
 from analytics_mcp.tools.reporting import realtime  # noqa: F401
 from analytics_mcp.tools.reporting import core  # noqa: F401
 from analytics_mcp.tools.reporting import acquisition  # noqa: F401
