@@ -61,53 +61,13 @@ ADS_SORT_BY_MAP = {
 @mcp.tool(
     description="""Get Google Ads performance: campaign, ad group, and keyword metrics from GA4.
 
-Shows how your Google Ads traffic performs in terms of engagement and conversions.
+Returns: sessions, totalUsers, keyEvents, engagementRate, bounceRate, userEngagementDuration
 
-## Requirements
-- Google Ads account must be linked to your GA4 property
-- Data shows only Google Ads traffic (not other paid sources)
+group_by: "campaign" (default), "ad_group", "keyword", "ad_network"
+sort_by: "sessions" (default), "users", "key_events", "engagement_rate", "bounce_rate"
+filter_campaign: Filter by campaign name (partial match)
 
-## Returns
-- sessions: Visits from Google Ads
-- totalUsers: Unique visitors from ads
-- keyEvents: Conversions attributed to ads
-- engagementRate: Percentage of engaged sessions
-- bounceRate: Percentage of single-page visits
-- userEngagementDuration: Engagement time (seconds)
-
-## Parameters
-
-### group_by (string, default: "campaign")
-- "campaign": Google Ads campaign name
-- "ad_group": Ad group within campaigns
-- "keyword": Search queries that triggered ads
-- "ad_network": Network type (Search, Display, YouTube, etc.)
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### limit (integer, default: 10)
-Number of results to return (1-100).
-
-### sort_by (string, default: "sessions")
-- "sessions": Sort by visit count
-- "users": Sort by unique visitors
-- "key_events": Sort by conversions
-- "engagement_rate": Sort by engagement rate
-- "bounce_rate": Sort by bounce rate
-
-### filter_campaign (string, optional)
-Filter by campaign name. Partial match, case-insensitive.
-
-## Examples
-- Top campaigns: get_google_ads_performance()
-- Ad groups by conversions: get_google_ads_performance(group_by="ad_group", sort_by="key_events")
-- Top keywords: get_google_ads_performance(group_by="keyword", limit=20)
-- Specific campaign: get_google_ads_performance(filter_campaign="Brand")
-
-## Note
-This shows GA4 engagement metrics for Google Ads traffic. For cost/CPC/impressions data, use the Google Ads API directly or check your Ads dashboard.
-"""
+Requires Google Ads linked to GA4. For cost/CPC data, use Google Ads API."""
 )
 async def get_google_ads_performance(
     group_by: Literal["campaign", "ad_group", "keyword", "ad_network"] = "campaign",
@@ -198,37 +158,14 @@ async def get_google_ads_performance(
 # =============================================================================
 
 @mcp.tool(
-    description="""Compare Google Ads performance against other traffic channels.
+    description="""Compare Google Ads vs other traffic channels (organic, direct, social, etc).
 
-Shows how Google Ads stacks up against organic search, direct, social, etc.
+Returns per channel: sessions, totalUsers, keyEvents, engagementRate, bounceRate
+Summary: paid_search_sessions, paid_search_share, total_sessions
 
-## Returns
-Per channel:
-- sessions: Total visits
-- totalUsers: Unique visitors
-- keyEvents: Conversions
-- engagementRate: Engaged session percentage
-- bounceRate: Single-page visit percentage
+sort_by: "sessions" (default), "users", "key_events", "engagement_rate", "bounce_rate"
 
-## Parameters
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### limit (integer, default: 10)
-Number of channels to return.
-
-### sort_by (string, default: "sessions")
-- "sessions", "users", "key_events", "engagement_rate", "bounce_rate"
-
-## Examples
-- Channel comparison: get_ads_vs_other_channels()
-- By conversions: get_ads_vs_other_channels(sort_by="key_events")
-- Last 7 days: get_ads_vs_other_channels(start_date="7daysAgo")
-
-## Note
-Uses GA4's default channel grouping. "Paid Search" typically represents Google Ads search traffic.
-"""
+"Paid Search" channel typically represents Google Ads search traffic."""
 )
 async def get_ads_vs_other_channels(
     start_date: str = "30daysAgo",

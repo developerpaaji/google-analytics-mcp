@@ -225,35 +225,14 @@ def _build_dimension_filter(
 
 
 @mcp.tool(
-    description="""Get total website traffic metrics: visitor counts, engagement, and page views.
+    description="""Get site-wide traffic totals: sessions, users, bounce rate, page views.
 
-Returns aggregate numbers for your entire site (not broken down by source or page).
+Returns: sessions, totalUsers, newUsers, bounceRate, userEngagementDuration, screenPageViews
 
-## Returns
-- sessions: Total visits
-- totalUsers: Unique visitors
-- newUsers: First-time visitors
-- bounceRate: Percentage of single-page visits
-- userEngagementDuration: Total engagement time (seconds)
-- screenPageViews: Total page views
+Dates: "today", "yesterday", "NdaysAgo", or "YYYY-MM-DD"
+Set compare_previous_period=true for period comparison.
 
-## Parameters
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### compare_previous_period (boolean, default: false)
-Include previous period for comparison.
-
-## Examples
-- Last 30 days: get_traffic_overview()
-- Last 7 days: get_traffic_overview(start_date="7daysAgo")
-- Specific dates: get_traffic_overview(start_date="2025-01-01", end_date="2025-01-31")
-- With comparison: get_traffic_overview(compare_previous_period=true)
-
-## Note
-This returns site-wide totals only. For traffic broken down by source/channel, use get_acquisition_report instead.
-"""
+For traffic by source/channel, use get_acquisition_report instead."""
 )
 async def get_traffic_overview(
     start_date: str = "30daysAgo",
@@ -311,53 +290,15 @@ async def get_traffic_overview(
 
 
 @mcp.tool(
-    description="""Get traffic sources breakdown: where visitors come from (channels, sources, campaigns).
+    description="""Get traffic sources: where visitors come from (channels, sources, campaigns).
 
-Shows traffic grouped by source, medium, channel, campaign, or landing page.
+Returns: sessions, totalUsers, newUsers, bounceRate, engagementRate, keyEvents
 
-## Returns
-- sessions: Total visits from each source
-- totalUsers: Unique visitors
-- newUsers: First-time visitors
-- bounceRate: Percentage of single-page visits
-- engagementRate: Percentage of engaged sessions
-- keyEvents: Conversion events (formerly called conversions)
+group_by: "source_medium" (default), "channel", "campaign", "source", "medium", "landing_page"
+sort_by: "sessions" (default), "users", "key_events", "engagement_rate", "bounce_rate"
+Filters: filter_source, filter_medium, filter_campaign, filter_page_path, filter_hostname
 
-## Parameters
-
-### group_by (string, default: "source_medium")
-- "source_medium": e.g., "google / organic", "facebook / cpc"
-- "channel": e.g., "Organic Search", "Paid Search", "Direct"
-- "campaign": Campaign names from UTM parameters
-- "source": e.g., "google", "facebook", "bing"
-- "medium": e.g., "organic", "cpc", "referral"
-- "landing_page": First page users landed on
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### limit (integer, default: 10)
-Number of results to return (1-100).
-
-### sort_by (string, default: "sessions")
-- "sessions", "users", "key_events", "engagement_rate", "bounce_rate"
-
-### Filters (all optional, partial match)
-- filter_source: e.g., "google", "facebook", "(direct)"
-- filter_medium: e.g., "cpc", "organic", "email", "referral"
-- filter_campaign: Campaign name
-- filter_page_path: e.g., "/blog/", "/pricing"
-- filter_hostname: e.g., "example.com"
-
-## Examples
-- Top sources: get_acquisition_report()
-- By channel: get_acquisition_report(group_by="channel")
-- Google Ads only: get_acquisition_report(filter_source="google", filter_medium="cpc")
-- Top campaigns: get_acquisition_report(group_by="campaign", sort_by="key_events", limit=5)
-
-## Note
-This shows traffic breakdown by source. For total site-wide metrics without breakdown, use get_traffic_overview instead.
-"""
+For site-wide totals, use get_traffic_overview instead."""
 )
 async def get_acquisition_report(
     group_by: Literal["source_medium", "channel", "campaign", "source", "medium", "landing_page"] = "source_medium",
@@ -467,42 +408,14 @@ GRANULARITY_DIMENSION_MAP = {
 
 
 @mcp.tool(
-    description="""Get traffic trends over time: daily, weekly, or monthly metrics.
+    description="""Get traffic trends over time: daily, weekly, or monthly breakdown.
 
-Shows how traffic metrics change over a date range.
+Returns: sessions, totalUsers, newUsers, screenPageViews, bounceRate, userEngagementDuration
 
-## Returns
-- date/week/month: The time period
-- sessions: Total visits
-- totalUsers: Unique visitors
-- newUsers: First-time visitors
-- screenPageViews: Total page views
-- bounceRate: Percentage of single-page visits
-- userEngagementDuration: Engagement time (seconds)
+granularity: "day" (default), "week", "month"
+metric: Optional filter - "sessions", "users", "page_views", "bounce_rate", "engagement_time"
 
-## Parameters
-
-### granularity (string, default: "day")
-- "day": Daily breakdown (best for 7-30 days)
-- "week": Weekly breakdown (best for 1-3 months)
-- "month": Monthly breakdown (best for 3+ months)
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### metric (string, optional)
-Focus on a specific metric. If not provided, returns all metrics.
-Options: "sessions", "users", "page_views", "bounce_rate", "engagement_time"
-
-## Examples
-- Daily traffic last 7 days: get_trends(start_date="7daysAgo")
-- Weekly traffic last 30 days: get_trends(granularity="week", start_date="30daysAgo")
-- Monthly users this year: get_trends(granularity="month", start_date="2025-01-01", metric="users")
-- Daily page views: get_trends(metric="page_views")
-
-## Note
-Results are sorted by date ascending (oldest first) for easy charting.
-"""
+Results sorted chronologically (oldest first)."""
 )
 async def get_trends(
     granularity: Literal["day", "week", "month"] = "day",

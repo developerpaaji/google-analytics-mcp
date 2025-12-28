@@ -17,12 +17,6 @@
 from typing import Any, Dict, List
 
 from analytics_mcp.coordinator import mcp
-from analytics_mcp.tools.reporting.metadata import (
-    get_date_ranges_hints,
-    get_dimension_filter_hints,
-    get_metric_filter_hints,
-    get_order_bys_hints,
-)
 from analytics_mcp.tools.utils import (
     create_data_api_client,
     get_property_id,
@@ -31,52 +25,24 @@ from analytics_mcp.tools.utils import (
 from google.analytics import data_v1beta
 
 
-def _run_report_description() -> str:
-    """Returns the description for the `run_report` tool."""
-    return f"""
-          {run_report.__doc__}
+_RUN_REPORT_DESCRIPTION = """Run a GA4 Data API report with custom dimensions, metrics, filters, and sorting.
 
-          ## Hints for arguments
+For filter/date/orderby JSON examples, call get_api_hints first.
 
-          Here are some hints that outline the expected format and requirements
-          for arguments.
+Args:
+  date_ranges: List of {start_date, end_date, name?}. Dates: "today", "yesterday", "NdaysAgo", or "YYYY-MM-DD".
+  dimensions: Dimension names from https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema#dimensions
+  metrics: Metric names from https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema#metrics
+  dimension_filter: FilterExpression for dimensions (get_api_hints for examples)
+  metric_filter: FilterExpression for metrics (get_api_hints for examples)
+  order_bys: List of OrderBy objects (get_api_hints for examples)
+  limit: Max rows (1-250000)
+  offset: Starting row (0-indexed)
+  currency_code: ISO4217 code (e.g., "USD")
+  return_property_quota: Include quota info
 
-          ### Hints for `dimensions`
-
-          The `dimensions` list must consist solely of either of the following:
-
-          1.  Standard dimensions defined in the HTML table at
-              https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema#dimensions.
-              These dimensions are available to *every* property.
-          2.  Custom dimensions for the `property_id`. Use the
-              `get_custom_dimensions_and_metrics` tool to retrieve the list of
-              custom dimensions for a property.
-
-          ### Hints for `metrics`
-
-          The `metrics` list must consist solely of either of the following:
-
-          1.  Standard metrics defined in the HTML table at
-              https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema#metrics.
-              These metrics are available to *every* property.
-          2.  Custom metrics for the `property_id`. Use the
-              `get_custom_dimensions_and_metrics` tool to retrieve the list of
-              custom metrics for a property.
-
-
-          ### Hints for `date_ranges`:
-          {get_date_ranges_hints()}
-
-          ### Hints for `dimension_filter`:
-          {get_dimension_filter_hints()}
-
-          ### Hints for `metric_filter`:
-          {get_metric_filter_hints()}
-
-          ### Hints for `order_bys`:
-          {get_order_bys_hints()}
-
-          """
+For custom dimensions/metrics, call get_custom_dimensions_and_metrics.
+"""
 
 
 async def run_report(
@@ -91,51 +57,7 @@ async def run_report(
     currency_code: str = None,
     return_property_quota: bool = False,
 ) -> Dict[str, Any]:
-    """Runs a Google Analytics Data API report.
-
-    Note that the reference docs at
-    https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta
-    all use camelCase field names, but field names passed to this method should
-    be in snake_case since the tool is using the protocol buffers (protobuf)
-    format. The protocol buffers for the Data API are available at
-    https://github.com/googleapis/googleapis/tree/master/google/analytics/data/v1beta.
-
-    The property ID is configured via the GA_PROPERTY_ID environment variable.
-
-    Args:
-        date_ranges: A list of date ranges
-          (https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/DateRange)
-          to include in the report.
-        dimensions: A list of dimensions to include in the report.
-        metrics: A list of metrics to include in the report.
-        dimension_filter: A Data API FilterExpression
-          (https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/FilterExpression)
-          to apply to the dimensions.  Don't use this for filtering metrics. Use
-          metric_filter instead. The `field_name` in a `dimension_filter` must
-          be a dimension, as defined in the `get_standard_dimensions` and
-          `get_dimensions` tools.
-        metric_filter: A Data API FilterExpression
-          (https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/FilterExpression)
-          to apply to the metrics.  Don't use this for filtering dimensions. Use
-          dimension_filter instead. The `field_name` in a `metric_filter` must
-          be a metric, as defined in the `get_standard_metrics` and
-          `get_metrics` tools.
-        order_bys: A list of Data API OrderBy
-          (https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/OrderBy)
-          objects to apply to the dimensions and metrics.
-        limit: The maximum number of rows to return in each response. Value must
-          be a positive integer <= 250,000. Used to paginate through large
-          reports, following the guide at
-          https://developers.google.com/analytics/devguides/reporting/data/v1/basics#pagination.
-        offset: The row count of the start row. The first row is counted as row
-          0. Used to paginate through large
-          reports, following the guide at
-          https://developers.google.com/analytics/devguides/reporting/data/v1/basics#pagination.
-        currency_code: The currency code to use for currency values. Must be in
-          ISO4217 format, such as "AED", "USD", "JPY". If the field is empty, the
-          report uses the property's default currency.
-        return_property_quota: Whether to return property quota in the response.
-    """
+    """Runs a Google Analytics Data API report."""
     request = data_v1beta.RunReportRequest(
         property=get_property_id(),
         dimensions=[
@@ -171,12 +93,8 @@ async def run_report(
     return proto_to_dict(response)
 
 
-# The `run_report` tool requires a more complex description that's generated at
-# runtime. Uses the `add_tool` method instead of an annnotation since `add_tool`
-# provides the flexibility needed to generate the description while also
-# including the `run_report` method's docstring.
 mcp.add_tool(
     run_report,
-    title="Run a Google Analytics Data API report using the Data API",
-    description=_run_report_description(),
+    title="Run a Google Analytics Data API report",
+    description=_RUN_REPORT_DESCRIPTION,
 )

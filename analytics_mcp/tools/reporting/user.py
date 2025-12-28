@@ -57,46 +57,12 @@ DEMOGRAPHICS_METRICS = [
 @mcp.tool(
     description="""Get user demographics: who are your visitors (country, device, browser, etc).
 
-Shows audience breakdown by geographic and technical attributes.
+Returns: totalUsers, sessions, engagementRate, bounceRate, screenPageViews
 
-## Returns
-- totalUsers: Unique visitors
-- sessions: Total visits
-- engagementRate: Percentage of engaged sessions
-- bounceRate: Percentage of single-page visits
-- screenPageViews: Total page views
+group_by: "country" (default), "city", "device", "browser", "os", "language"
+sort_by: "users" (default), "sessions", "engagement_rate", "bounce_rate"
 
-## Parameters
-
-### group_by (string, default: "country")
-- "country": User's country (e.g., "United States", "India")
-- "city": User's city (e.g., "New York", "London")
-- "device": Device type (Desktop, Mobile, Tablet)
-- "browser": Browser name (Chrome, Safari, Firefox)
-- "os": Operating system (Windows, iOS, Android, macOS)
-- "language": Browser language setting (en-us, es, fr)
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### limit (integer, default: 10)
-Number of results to return (1-100).
-
-### sort_by (string, default: "users")
-- "users": Sort by unique visitors
-- "sessions": Sort by session count
-- "engagement_rate": Sort by engagement rate
-- "bounce_rate": Sort by bounce rate
-
-## Examples
-- Top countries: get_user_demographics()
-- Device breakdown: get_user_demographics(group_by="device")
-- Top browsers: get_user_demographics(group_by="browser", limit=5)
-- Mobile vs Desktop: get_user_demographics(group_by="device", sort_by="sessions")
-
-## Note
-This shows audience attributes. For traffic sources, use get_acquisition_report instead.
-"""
+For traffic sources, use get_acquisition_report instead."""
 )
 async def get_user_demographics(
     group_by: Literal["country", "city", "device", "browser", "os", "language"] = "country",
@@ -179,41 +145,14 @@ RETENTION_METRICS = [
 
 
 @mcp.tool(
-    description="""Get user retention: how well you keep users coming back over time.
+    description="""Get user retention: new vs returning users and engagement patterns.
 
-Shows new vs returning users and engagement patterns.
+Returns: totalUsers, newUsers, activeUsers, userEngagementDuration, returning_users, returning_rate
 
-## Returns
-- totalUsers: Total unique visitors
-- newUsers: First-time visitors
-- activeUsers: Users who had an engaged session
-- userEngagementDuration: Total engagement time (seconds)
-- returning_users: Calculated (totalUsers - newUsers)
-- returning_rate: Percentage of returning users
+retention_type: "new_vs_returning" (default), "by_first_visit" (cohort)
+granularity: "day" (default), "week", "month" (for by_first_visit only)
 
-## Parameters
-
-### retention_type (string, default: "new_vs_returning")
-- "new_vs_returning": Compare new and returning users
-- "by_first_visit": Group users by when they first visited (cohort)
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### granularity (string, default: "day")
-For "by_first_visit" type only:
-- "day": Daily cohorts
-- "week": Weekly cohorts
-- "month": Monthly cohorts
-
-## Examples
-- New vs returning users: get_retention()
-- Last 7 days: get_retention(start_date="7daysAgo")
-- Cohort analysis: get_retention(retention_type="by_first_visit", granularity="week")
-
-## Note
-For detailed cohort analysis with retention curves, use GA4 Exploration reports in the UI.
-"""
+For detailed cohort curves, use GA4 Exploration in the UI."""
 )
 async def get_retention(
     retention_type: Literal["new_vs_returning", "by_first_visit"] = "new_vs_returning",

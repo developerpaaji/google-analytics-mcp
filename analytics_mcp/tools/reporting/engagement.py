@@ -52,51 +52,13 @@ PAGE_METRICS = [
 
 
 @mcp.tool(
-    description="""Get top pages report: which pages get the most traffic and engagement.
+    description="""Get top pages: which pages get the most traffic and engagement.
 
-Shows page performance ranked by views, users, or engagement.
+Returns: screenPageViews, totalUsers, userEngagementDuration, bounceRate, sessions
 
-## Returns
-- screenPageViews: Total page views
-- totalUsers: Unique visitors to the page
-- userEngagementDuration: Time spent on page (seconds)
-- bounceRate: Percentage of single-page visits
-- sessions: Number of sessions including this page
-
-## Parameters
-
-### page_type (string, default: "all")
-- "all": All pages by URL path
-- "landing_pages": First page users see when entering the site
-- "exit_pages": Last page users see before leaving
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### limit (integer, default: 10)
-Number of results to return (1-100).
-
-### sort_by (string, default: "views")
-- "views": Sort by page views
-- "users": Sort by unique visitors
-- "engagement_time": Sort by time on page
-- "bounce_rate": Sort by bounce rate
-
-### filter_path (string, optional)
-Filter by URL path. Examples: "/blog/", "/products/", "/pricing"
-
-### filter_hostname (string, optional)
-Filter by hostname. Examples: "example.com", "blog.example.com"
-
-## Examples
-- Top 10 pages: get_top_pages()
-- Top landing pages: get_top_pages(page_type="landing_pages")
-- Blog pages only: get_top_pages(filter_path="/blog/")
-- Most engaging pages: get_top_pages(sort_by="engagement_time", limit=20)
-
-## Note
-This shows page-level metrics. For site-wide totals, use get_traffic_overview instead.
-"""
+page_type: "all" (default), "landing_pages", "exit_pages"
+sort_by: "views" (default), "users", "engagement_time", "bounce_rate"
+Filters: filter_path (e.g., "/blog/"), filter_hostname"""
 )
 async def get_top_pages(
     page_type: Literal["all", "landing_pages", "exit_pages"] = "all",
@@ -225,45 +187,13 @@ EVENTS_METRICS = [
 
 
 @mcp.tool(
-    description="""Get events report: what actions are users taking on your site.
+    description="""Get events: what actions users take on your site.
 
-Shows event counts, users, and values for tracked events.
+Returns: eventCount, totalUsers, eventCountPerUser, eventValue
 
-## Returns
-- eventCount: Total times the event was triggered
-- totalUsers: Unique users who triggered the event
-- eventCountPerUser: Average events per user
-- eventValue: Total value associated with events (if configured)
-
-## Parameters
-
-### event_type (string, default: "all")
-- "all": All events tracked on the site
-- "key_events_only": Only key events (formerly called conversions)
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### limit (integer, default: 10)
-Number of results to return (1-100).
-
-### sort_by (string, default: "count")
-- "count": Sort by total event count
-- "users": Sort by unique users
-
-### filter_event (string, optional)
-Filter by event name. Examples: "purchase", "sign_up", "page_view"
-Partial match, case-insensitive.
-
-## Examples
-- All events: get_events()
-- Key events only: get_events(event_type="key_events_only")
-- Purchase events: get_events(filter_event="purchase")
-- Top events by users: get_events(sort_by="users", limit=20)
-
-## Note
-This shows event-level data. For page views, use get_top_pages instead.
-"""
+event_type: "all" (default), "key_events_only" (conversions)
+sort_by: "count" (default), "users"
+filter_event: Filter by event name (partial match)"""
 )
 async def get_events(
     event_type: Literal["all", "key_events_only"] = "all",
@@ -387,39 +317,14 @@ SIGNUP_FUNNEL_EVENTS = [
 
 
 @mcp.tool(
-    description="""Get funnel analysis: track user progression through a sequence of events.
+    description="""Get funnel analysis: track user progression through event sequences.
 
-Shows how many users complete each step and where they drop off.
+Returns: steps with eventCount, users, conversion_rate, drop_off_rate; overall_conversion_rate
 
-## Returns
-- steps: List of funnel steps with event counts and users
-- drop_off_rate: Percentage of users lost at each step
-- overall_conversion_rate: % of users who completed the entire funnel
+funnel_type: "ecommerce" (view_item→add_to_cart→begin_checkout→purchase), "signup" (page_view→sign_up→first_open)
+custom_events: List of event names for custom funnel (e.g., ["landing", "form_start", "submit"])
 
-## Parameters
-
-### funnel_type (string, default: "ecommerce")
-Pre-built funnels:
-- "ecommerce": view_item → add_to_cart → begin_checkout → purchase
-- "signup": page_view → sign_up → first_open
-
-### custom_events (list, optional)
-Define your own funnel with a list of event names.
-Example: ["landing_page", "form_start", "form_submit", "confirmation"]
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-## Examples
-- Ecommerce funnel: get_funnel()
-- Signup funnel: get_funnel(funnel_type="signup")
-- Custom funnel: get_funnel(custom_events=["page_view", "click_cta", "form_submit"])
-- Last 7 days: get_funnel(start_date="7daysAgo")
-
-## Note
-This uses event counts per step. For true session-based funnels with
-strict ordering, use the GA4 Exploration reports in the UI.
-"""
+Note: Uses event counts, not strict session ordering."""
 )
 async def get_funnel(
     funnel_type: Literal["ecommerce", "signup"] = "ecommerce",
@@ -545,39 +450,14 @@ SEARCH_METRICS = [
 
 
 @mcp.tool(
-    description="""Get site search report: what users search for on your site.
+    description="""Get site search: what users search for on your site.
 
-Shows search terms users enter in your site's search box.
+Returns: searchTerm, eventCount, totalUsers
 
-## Returns
-- searchTerm: The search query entered by users
-- eventCount: Number of times this term was searched
-- totalUsers: Unique users who searched this term
+sort_by: "count" (default), "users"
+filter_term: Filter by search term (partial match)
 
-## Parameters
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### limit (integer, default: 20)
-Number of results to return (1-100).
-
-### sort_by (string, default: "count")
-- "count": Sort by search frequency
-- "users": Sort by unique users
-
-### filter_term (string, optional)
-Filter by search term. Partial match, case-insensitive.
-
-## Examples
-- Top search terms: get_site_search()
-- Last 7 days: get_site_search(start_date="7daysAgo")
-- Search for specific term: get_site_search(filter_term="pricing")
-
-## Note
-Requires site search tracking to be configured in GA4.
-If no results, site search may not be set up for this property.
-"""
+Requires site search tracking configured in GA4."""
 )
 async def get_site_search(
     start_date: str = "30daysAgo",

@@ -316,7 +316,49 @@ def get_order_bys_hints():
 
 
 @mcp.tool(
-    title="Retrieves the custom Core Reporting dimensions and metrics for the configured property"
+    description="""Get API hints and examples for building complex GA4 queries.
+
+Call this tool BEFORE using run_report or run_realtime_report to get JSON examples for filters, date ranges, and sorting.
+
+## Parameters
+- hint_type: "date_ranges" | "dimension_filter" | "metric_filter" | "order_bys" | "all"
+
+## When to use
+- Building custom reports with run_report or run_realtime_report
+- Need filter syntax examples (string, numeric, AND/OR groups)
+- Need date range format examples
+- Need sorting/ordering examples
+"""
+)
+async def get_api_hints(
+    hint_type: str = "all",
+) -> Dict[str, Any]:
+    """Returns API hints and examples for building GA4 queries."""
+    hints = {}
+
+    if hint_type in ("date_ranges", "all"):
+        hints["date_ranges"] = get_date_ranges_hints()
+
+    if hint_type in ("dimension_filter", "all"):
+        hints["dimension_filter"] = get_dimension_filter_hints()
+
+    if hint_type in ("metric_filter", "all"):
+        hints["metric_filter"] = get_metric_filter_hints()
+
+    if hint_type in ("order_bys", "all"):
+        hints["order_bys"] = get_order_bys_hints()
+
+    if not hints:
+        return {
+            "error": f"Unknown hint_type: {hint_type}",
+            "valid_types": ["date_ranges", "dimension_filter", "metric_filter", "order_bys", "all"]
+        }
+
+    return hints
+
+
+@mcp.tool(
+    description="Get custom dimensions and metrics for the configured GA4 property. Use for discovering property-specific fields."
 )
 async def get_custom_dimensions_and_metrics() -> Dict[str, List[Dict[str, Any]]]:
     """Returns the property's custom dimensions and metrics.

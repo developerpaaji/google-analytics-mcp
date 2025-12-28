@@ -50,29 +50,9 @@ PRODUCT_METRICS = [
 @mcp.tool(
     description="""Get ecommerce overview: revenue, transactions, and conversion metrics.
 
-Shows high-level ecommerce performance for your site.
+Returns: totalRevenue, ecommercePurchases, purchaseRevenue, averagePurchaseRevenue, transactions, purchaserConversionRate
 
-## Returns
-- totalRevenue: Total revenue from all sources
-- ecommercePurchases: Number of purchases
-- purchaseRevenue: Revenue from purchases only
-- averagePurchaseRevenue: Average order value
-- transactions: Total transaction count
-- purchaserConversionRate: % of users who purchased
-
-## Parameters
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-## Examples
-- Last 30 days: get_ecommerce_overview()
-- Last 7 days: get_ecommerce_overview(start_date="7daysAgo")
-- This month: get_ecommerce_overview(start_date="2025-01-01", end_date="today")
-
-## Note
-Requires ecommerce tracking to be configured in GA4.
-"""
+Requires ecommerce tracking configured in GA4."""
 )
 async def get_ecommerce_overview(
     start_date: str = "30daysAgo",
@@ -110,51 +90,15 @@ async def get_ecommerce_overview(
 
 
 @mcp.tool(
-    description="""Get top products report: best selling products by revenue or quantity.
+    description="""Get top products: best selling products by revenue or quantity.
 
-Shows product performance ranked by revenue, purchases, or views.
+Returns: itemRevenue, itemsPurchased, itemsViewed, itemsAddedToCart, cartToViewRate, purchaseToViewRate
 
-## Returns
-- itemRevenue: Revenue from this product
-- itemsPurchased: Quantity sold
-- itemsViewed: Number of product views
-- itemsAddedToCart: Times added to cart
-- cartToViewRate: % of views that added to cart
-- purchaseToViewRate: % of views that purchased
+group_by: "product" (default), "category", "brand"
+sort_by: "revenue" (default), "purchases", "views"
+Filters: filter_product, filter_category (partial match)
 
-## Parameters
-
-### group_by (string, default: "product")
-- "product": Group by product name
-- "category": Group by product category
-- "brand": Group by product brand
-
-### start_date / end_date (string)
-Valid: "today", "yesterday", "7daysAgo", "30daysAgo", or "YYYY-MM-DD"
-
-### limit (integer, default: 10)
-Number of results to return (1-100).
-
-### sort_by (string, default: "revenue")
-- "revenue": Sort by item revenue
-- "purchases": Sort by quantity sold
-- "views": Sort by product views
-
-### filter_product (string, optional)
-Filter by product name. Partial match, case-insensitive.
-
-### filter_category (string, optional)
-Filter by product category. Partial match, case-insensitive.
-
-## Examples
-- Top 10 products by revenue: get_top_products()
-- Top categories: get_top_products(group_by="category")
-- Most viewed products: get_top_products(sort_by="views", limit=20)
-- Products in "shoes" category: get_top_products(filter_category="shoes")
-
-## Note
-Requires ecommerce tracking with product data configured in GA4.
-"""
+Requires ecommerce tracking with product data in GA4."""
 )
 async def get_top_products(
     group_by: Literal["product", "category", "brand"] = "product",
